@@ -79,9 +79,11 @@ public class DeveloperService {
         Developer developer = repository.findById(developerId)
                 .orElseThrow(() -> new IllegalStateException("Developer with ID " + developerId + " not found."));
 
-        register(developerId);
+        if (developer.getAccStatus() == DevAccount.UNPAID) {
+            register(developerId);
+        }
 
-        if (!developer.isPaymentProfile() && developer.getAccStatus() == DevAccount.UNPAID) {
+        if (!developer.isPaymentProfile()) {
             throw new IllegalStateException("Developer must set up a payment profile before submitting apps.");
         }
 
@@ -97,7 +99,7 @@ public class DeveloperService {
         MonetizationType monetizationType = determineMonetizationType(wantsToMonetize, wantsToCharge);
         app.setMonetizationType(monetizationType);
 
-        Payment payment = createPayment(app, monetizationType);
+        Payment payment = createPaymentForAppSubmission(app, monetizationType);
 
         if (!processPayment(payment)) {
             throw new IllegalStateException("Payment failed, unable to submit app.");
@@ -111,6 +113,16 @@ public class DeveloperService {
 
         return app;
     }
+
+    private Payment createPaymentForAppSubmission(App app, MonetizationType monetizationType) {
+        Payment payment = new Payment();
+        payment.setAmount(PUBLISHING_FEE);
+        payment.setMonetizationType(monetizationType);
+        payment.setApp(app);
+        paymentRepository.save(payment);
+        return payment;
+    }
+
 
     private boolean processPayment(Payment payment) {
         if (payment.getAmount() > 0) {
@@ -139,14 +151,6 @@ public class DeveloperService {
         }
     }
 
-    private Payment createPayment(App app, MonetizationType monetizationType) {
-        Payment payment = new Payment();
-        payment.setAmount(PUBLISHING_FEE);
-        payment.setMonetizationType(monetizationType);
-        payment.setApp(app);
-        paymentRepository.save(payment);
-        return payment;
-    }
 
 
     @Transactional
@@ -190,28 +194,26 @@ public class DeveloperService {
         Developer developer = developerRepository.findById(developerId)
                 .orElseThrow(() -> new RuntimeException("Developer not found"));
 
-        DeveloperDto dto = new DeveloperDto();
-        dto.setId(developer.getId());
-        dto.setName(developer.getName());
-        dto.setEmail(developer.getEmail());
-        dto.setPaymentProfile(developer.isPaymentProfile());
-        dto.setAccStatus(developer.getAccStatus());
-        dto.setEarnings(developer.getEarnings());
-        dto.setApps(developer.getApps().stream().map(app -> {
-            AppDto appDto = new AppDto();
-            appDto.setId(app.getId());
-            appDto.setName(app.getName());
-            appDto.setVersion(app.getVersion());
-            appDto.setStatus(app.getStatus());
-            appDto.setDownloads(app.getDownloads());
-            appDto.setRevenue(app.getRevenue());
-            appDto.setInAppPurchases(app.isInAppPurchases());
-            appDto.setNotFree(app.isNotFree());
-            appDto.setAppPrice(app.getAppPrice());
-            appDto.setMonetizationType(app.getMonetizationType());
-            return appDto;
-        }).collect(Collectors.toList()));
-
-        return dto;
+        return new DeveloperDto(
+                developer.getId(),
+                developer.getName(),
+                developer.getEmail(),
+                developer.isPaymentProfile(),
+                developer.getAccStatus(),
+                developer.getEarnings(),
+                developer.getApps().stream().map(app -> new AppDto(
+                        app.getId(),
+                        app.getName(),
+                        app.getVersion(),
+                        app.getStatus(),
+                        app.getDownloads(),
+                        app.getRevenue(),
+                        app.isInAppPurchases(),
+                        app.isNotFree(),
+                        app.getAppPrice(),
+                        app.getMonetizationType()
+                )).collect(Collectors.toList())
+        );
     }
+
 }

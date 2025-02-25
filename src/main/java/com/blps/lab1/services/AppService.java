@@ -1,12 +1,9 @@
 package com.blps.lab1.services;
 
 import com.blps.lab1.dto.AppDto;
-import com.blps.lab1.dto.DeveloperDto;
 import com.blps.lab1.entities.App;
-import com.blps.lab1.entities.Developer;
 import com.blps.lab1.entities.Payment;
 import com.blps.lab1.repo.AppRepository;
-import com.blps.lab1.repo.DeveloperRepository;
 import com.blps.lab1.repo.PaymentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -18,7 +15,6 @@ public class AppService {
 
     private final AppRepository appRepository;
     private final PaymentRepository paymentRepository;
-    private final DeveloperRepository developerRepository;
 
     @Transactional
     public App updateAnalytics(Long appId) {
@@ -43,19 +39,19 @@ public class AppService {
         App app = appRepository.findById(appId)
                 .orElseThrow(() -> new RuntimeException("App not found"));
 
-        AppDto dto = new AppDto();
-        dto.setId(app.getId());
-        dto.setName(app.getName());
-        dto.setVersion(app.getVersion());
-        dto.setStatus(app.getStatus());
-        dto.setDownloads(app.getDownloads());
-        dto.setRevenue(app.getRevenue());
-        dto.setInAppPurchases(app.isInAppPurchases());
-        dto.setNotFree(app.isNotFree());
-        dto.setAppPrice(app.getAppPrice());
-        dto.setMonetizationType(app.getMonetizationType());
-
-        return dto;
+        return new AppDto(
+                app.getId(),
+                app.getName(),
+                app.getVersion(),
+                app.getStatus(),
+                app.getDownloads(),
+                app.getRevenue(),
+                app.isInAppPurchases(),
+                app.isNotFree(),
+                app.getAppPrice(),
+                app.getMonetizationType()
+        );
     }
+
 
 }
